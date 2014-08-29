@@ -4,7 +4,7 @@
   "description": "Yeoman generator",
   "license": "MIT",
   "main": "app/index.js",
-  "repository": "tolmark12/generator-yo-gulp",
+  "repository": "tolmark12/yeoman-gulp-template",
   "author": {
     "name": "Tolmark12",
     "email": "",
