@@ -13,7 +13,6 @@
 }
 
 @mixin drop-shadow ($xoffset:0px, $yoffset:1px, $blur:13px, $color:#050505, $radius:0px) {
-  // @include box-shadow();
   -webkit-box-shadow: $xoffset $yoffset $blur $radius $color;
   -moz-box-shadow: $xoffset $yoffset $blur $radius $color;
   box-shadow: $xoffset $yoffset $blur $radius $color;

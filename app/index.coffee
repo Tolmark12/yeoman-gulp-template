@@ -37,6 +37,7 @@ YoGulpGenerator = yeoman.generators.Base.extend(
       @src.copy "_gulpfile.js",               "gulpfile.js"
       @src.copy "_gulpfile.coffee",           "gulpfile.coffee"
       @src.copy "_bower.json",                "bower.json"
+      @src.copy "_bowerrc.json",              ".bowerrc"
       @src.copy "_package.json",              "package.json"
 
       # App

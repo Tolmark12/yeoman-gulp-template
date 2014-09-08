@@ -10,7 +10,6 @@ fs           = require 'fs'
 git          = require 'gulp-git'
 gulp         = require 'gulp'
 gutil        = require 'gulp-util'
-handlebars   = require 'gulp-handlebars'
 http         = require 'http'
 jade         = require 'gulp-jade'
 livereload   = require 'gulp-livereload'
@@ -27,13 +26,13 @@ wrap         = require 'gulp-wrap'
 
 # Paths to source files
 
-jadeStagePath     = './stage/stage.jade'
-jadePath          = './app/jade/**/*.jade'
-cssPath           = './app/scss/*.scss'
-cssStagePath      = './stage/stage.scss'
-coffeePath        = './app/coffee/**/*.coffee'
-coffeeStagePath   = "./stage/**/*.coffee"
-imagePath         = "./app/images/*"
+jadeStagePath     = 'stage/stage.jade'
+jadePath          = 'app/jade/**/*.jade'
+cssPath           = 'app/scss/**/*.scss'
+cssStagePath      = 'stage/stage.scss'
+coffeePath        = 'app/coffee/**/*.coffee'
+coffeeStagePath   = 'stage/**/*.coffee'
+assetPath         = 'app/images/*'
 
 
 htmlStage = ->
@@ -41,16 +40,12 @@ htmlStage = ->
     .pipe jade() 
     .pipe gulp.dest('./server/') 
 
-gulp.task 'html', -> htmlStage()
-
-
 html = ->
   gulp.src( jadePath )
-    .pipe jade()
-    .pipe handlebars()
-    .pipe wrap( 'Handlebars.template(<%= contents %>)' )
-    .pipe declare( namespace:'hTemplates')
-    .pipe concat('handlebars-templates.js') 
+    .pipe jade(client: true)
+    .pipe wrap("jadeTemplate['<%= file.relative.split('.')[0] %>'] = <%= file.contents %>;\n")
+    .pipe concat('jade-templates.js') 
+    .pipe wrap("jadeTemplate = {};\n<%= file.contents %>")
     .pipe gulp.dest('./server/js') 
 
 css = ->
@@ -80,10 +75,9 @@ jsStage = ->
     .pipe concat('init.js') 
     .pipe gulp.dest('server/stage/js') 
 
-copyImages = () ->
-  gulp.src imagePath
-    .pipe gulp.dest('server/images') 
-    .on('end', cb)
+copyAssets = (destination) ->
+  gulp.src assetPath
+    .pipe gulp.dest(destination) 
 
 copyBowerLibs = ->
   bower().pipe gulp.dest('./server/bower-libs/')
@@ -115,8 +109,6 @@ minifyAndJoin = () ->
       js  : [ uglify(), rev()]
     .pipe(gulp.dest('rel/'));
 
-gulp.task 'min', -> minifyAndJoin()
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # 
 
@@ -142,27 +134,28 @@ launch = ->
 
 # Livereload Server
 watchAndCompileFiles = (cb)->
-  watch { glob:coffeePath      },  -> js().pipe         livereload() 
-  watch { glob:cssPath         },  -> css().pipe        livereload()
-  watch { glob:jadePath        },  -> html().pipe       livereload() 
-  watch { glob:coffeeStagePath },  -> jsStage().pipe    livereload() 
-  watch { glob:cssStagePath    },  -> cssStage().pipe   livereload()
-  watch { glob:jadeStagePath   },  -> htmlStage().pipe  livereload() 
-  watch { glob:imagePath       },  -> copyImages().pipe livereload() 
+  watch { glob:coffeePath      },  -> js().pipe                            livereload() 
+  watch { glob:cssPath         },  -> css().pipe                           livereload()
+  watch { glob:jadePath        },  -> html().pipe                          livereload() 
+  watch { glob:coffeeStagePath },  -> jsStage().pipe                       livereload() 
+  watch { glob:cssStagePath    },  -> cssStage().pipe                      livereload()
+  watch { glob:jadeStagePath   },  -> htmlStage().pipe                     livereload() 
+  watch { glob:assetPath       },  -> copyAssets('server/assets').pipe     livereload() 
 
 
 # ----------- BUILD (rel) ----------- #
 
-gulp.task 'rel:clean',       (cb) -> del( ['./rel/*'], cb); console.log "IMPORTANT! Make sure you run 'gulp' before 'gulp rel'"
-gulp.task 'bumpVersion',     ()   -> bumpBowerVersion()
-gulp.task 'minify',          ()   -> minifyAndJoin();
+gulp.task 'rel:clean',              (cb) -> del( ['./rel/*'], cb); console.log "!! IMPORTANT !! If you haven't already, make sure you run 'gulp' before 'gulp rel'"
+gulp.task 'bumpVersion',            ()   -> bumpBowerVersion()
+gulp.task 'copyAssets',             ()   -> copyAssets('rel/assets')
+gulp.task 'minify',['copyAssets'],  ()   -> minifyAndJoin(); 
 gulp.task 'rel', ['rel:clean', 'bumpVersion', 'minify'], -> pushViaGit()
 
 
   # ----------- MAIN ----------- #
 
 gulp.task 'clean',                 (cb) -> del ['./server/*',], cb
-gulp.task 'bowerLibs', ['clean'],  (cb) -> copyBowerLibs();
+gulp.task 'bowerLibs', ['clean'],  ()   -> copyBowerLibs();
 gulp.task 'server', ['bowerLibs'], ()   -> watchAndCompileFiles(); server(); launch()
 gulp.task 'default', ['server']
 

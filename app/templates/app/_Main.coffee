@@ -1,2 +1,2 @@
-node = hTemplates['example']( {message:'Hello from a handlebars template'} )
+node = jadeTemplate['example']( {message:'Hello from a jade template'} )
 $('body').append( $(node) )
