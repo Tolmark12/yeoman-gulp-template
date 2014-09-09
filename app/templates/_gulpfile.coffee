@@ -35,51 +35,58 @@ coffeeStagePath   = 'stage/**/*.coffee'
 assetPath         = 'app/images/*'
 
 
-htmlStage = ->
+htmlStage = (cb)->
   gulp.src jadeStagePath
     .pipe jade() 
-    .pipe gulp.dest('./server/') 
+    .pipe gulp.dest('./server/')
+    .on('end', cb) 
 
-html = ->
+html = (cb)->
   gulp.src( jadePath )
     .pipe jade(client: true)
     .pipe wrap("jadeTemplate['<%= file.relative.split('.')[0] %>'] = <%= file.contents %>;\n")
     .pipe concat('jade-templates.js') 
     .pipe wrap("jadeTemplate = {};\n<%= file.contents %>")
-    .pipe gulp.dest('./server/js') 
+    .pipe gulp.dest('./server/js')
+    .on('end', cb) 
 
-css = ->
+css = (cb)->
   # Stage css - not included in build
   gulp.src( cssPath )
     .pipe sass({errLogToConsole: true}) 
-    .pipe gulp.dest('./server/css') 
+    .pipe gulp.dest('./server/css')
+    .on('end', cb)
 
-cssStage = ->
+cssStage = (cb)->
   # Stage css - not included in build
   gulp.src( cssStagePath )
     .pipe sass({errLogToConsole: true}) 
-    .pipe gulp.dest('./server/stage/css') 
+    .pipe gulp.dest('./server/stage/css')
+    .on('end', cb) 
 
-js = ->
+js = (cb)->
   # App
   gulp.src( coffeePath )
     .pipe plumber() 
     .pipe coffee( bare: true ).on( 'error', gutil.log ) .on( 'error', gutil.beep )
     .pipe concat('app.js') 
-    .pipe gulp.dest('server/js') 
+    .pipe gulp.dest('server/js')
+    .on('end', cb) 
 
-jsStage = ->
+jsStage = (cb)->
   gulp.src coffeeStagePath
     .pipe plumber() 
     .pipe coffee( bare: true ).on('error', gutil.log).on( 'error', gutil.beep )
     .pipe concat('init.js') 
-    .pipe gulp.dest('server/stage/js') 
+    .pipe gulp.dest('server/stage/js')
+    .on('end', cb) 
 
-copyAssets = (destination) ->
+copyAssets = (destination, cb) ->
   gulp.src assetPath
-    .pipe gulp.dest(destination) 
+    .pipe gulp.dest(destination)
+    .on('end', cb) 
 
-copyBowerLibs = ->
+copyBowerLibs = ()->
   bower().pipe gulp.dest('./server/bower-libs/')
 
 copyFilesToBuild = ->
@@ -134,13 +141,16 @@ launch = ->
 
 # Livereload Server
 watchAndCompileFiles = (cb)->
-  watch { glob:coffeePath      },  -> js().pipe                            livereload() 
-  watch { glob:cssPath         },  -> css().pipe                           livereload()
-  watch { glob:jadePath        },  -> html().pipe                          livereload() 
-  watch { glob:coffeeStagePath },  -> jsStage().pipe                       livereload() 
-  watch { glob:cssStagePath    },  -> cssStage().pipe                      livereload()
-  watch { glob:jadeStagePath   },  -> htmlStage().pipe                     livereload() 
-  watch { glob:assetPath       },  -> copyAssets('server/assets').pipe     livereload() 
+  count = 0
+  onComplete = ()=> if ++count == 6 then cb()
+
+  watch { glob:coffeePath      },  -> js(onComplete).pipe                            livereload() 
+  watch { glob:cssPath         },  -> css(onComplete).pipe                           livereload()
+  watch { glob:jadePath        },  -> html(onComplete).pipe                          livereload() 
+  watch { glob:coffeeStagePath },  -> jsStage(onComplete).pipe                       livereload() 
+  watch { glob:cssStagePath    },  -> cssStage(onComplete).pipe                      livereload()
+  watch { glob:jadeStagePath   },  -> htmlStage(onComplete).pipe                     livereload() 
+  watch { glob:assetPath       },  -> copyAssets('server/assets', onComplete).pipe   livereload() 
 
 
 # ----------- BUILD (rel) ----------- #
@@ -154,8 +164,9 @@ gulp.task 'rel', ['rel:clean', 'bumpVersion', 'minify'], -> pushViaGit()
 
   # ----------- MAIN ----------- #
 
-gulp.task 'clean',                 (cb) -> del ['./server/*',], cb
-gulp.task 'bowerLibs', ['clean'],  ()   -> copyBowerLibs();
-gulp.task 'server', ['bowerLibs'], ()   -> watchAndCompileFiles(); server(); launch()
+gulp.task 'clean',                  (cb) -> del ['./server/*'], cb
+gulp.task 'bowerLibs', ['clean'],   ()   -> copyBowerLibs()
+gulp.task 'compile', ['bowerLibs'], (cb) -> watchAndCompileFiles(cb)
+gulp.task 'server', ['compile'],    (cb) -> server(); launch();
 gulp.task 'default', ['server']
 
