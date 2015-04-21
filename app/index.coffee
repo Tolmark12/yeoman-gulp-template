@@ -10,7 +10,7 @@ YoGulpGenerator = yeoman.generators.Base.extend(
     return
 
   prompting: ->
-    
+
     # Have Yeoman greet the user.
     @log yosay("Welcome to our gulp js app generator")
     # done = @async()
@@ -48,7 +48,7 @@ YoGulpGenerator = yeoman.generators.Base.extend(
 
       # Stage
       @src.copy "stage/init.coffee",          "stage/init.coffee"
-      @src.copy "stage/stage.jade",           "stage/stage.jade"
+      @src.copy "stage/index.jade",           "stage/index.jade"
       @src.copy "stage/stage.scss",           "stage/stage.scss"
       return
 
